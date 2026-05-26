@@ -1031,7 +1031,7 @@ def main():
         st.markdown("---")
         st.subheader("📊 Hasil Uji Statistik")
         if not ab_results.empty:
-            st.dataframe(ab_results.style.applymap(
+            st.dataframe(ab_results.style.map(
                 lambda v: 'background-color: #d4edda' if v == '✅ YA' else ('background-color: #f8d7da' if v == '❌ TIDAK' else ''),
                 subset=["Signifikan (α=0.05)"]
             ), use_container_width=True)
