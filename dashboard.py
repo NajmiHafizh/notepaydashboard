@@ -654,21 +654,29 @@ def main():
         with col2:
             st.subheader("Rekomendasi Pengembangan")
             
-            low_categories = kategori_dist[kategori_dist['persentase'] < 10]
-            if len(low_categories) > 0:
+            if not kategori_dist.empty and 'persentase' in kategori_dist.columns:
+                low_categories = kategori_dist[kategori_dist['persentase'] < 10]
+                if len(low_categories) > 0:
+                    st.markdown("""
+                    <div style='background-color: #FFD700; padding: 15px; border: 3px solid #000; box-shadow: 4px 4px 0px #000;'>
+                        <h4 style='margin:0;'>⚠️ PERHATIAN</h4>
+                        <p style='margin:10px 0 0 0; font-weight:bold;'>Kategori dengan proporsi < 10%:</p>
+                    """, unsafe_allow_html=True)
+                    for _, row in low_categories.iterrows():
+                        st.write(f"- **{row['kategori'].upper()}**: {row['persentase']:.1f}%")
+                    st.markdown("""
+                        <p style='margin-top:10px; font-size:0.9rem;'>📌 Rekomendasi: Perkuat dengan data tambahan sebelum implementasi klasifikasi otomatis.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.success("✅ Semua kategori memiliki proporsi di atas 10%")
+            else:
                 st.markdown("""
-                <div style='background-color: #FFD700; padding: 15px; border: 3px solid #000; box-shadow: 4px 4px 0px #000;'>
-                    <h4 style='margin:0;'>⚠️ PERHATIAN</h4>
-                    <p style='margin:10px 0 0 0; font-weight:bold;'>Kategori dengan proporsi < 10%:</p>
-                """, unsafe_allow_html=True)
-                for _, row in low_categories.iterrows():
-                    st.write(f"- **{row['kategori'].upper()}**: {row['persentase']:.1f}%")
-                st.markdown("""
-                    <p style='margin-top:10px; font-size:0.9rem;'>📌 Rekomendasi: Perkuat dengan data tambahan sebelum implementasi klasifikasi otomatis.</p>
+                <div style='background-color: #F3F4F6; padding: 15px; border: 2px solid #000;'>
+                    <p style='margin:0; font-weight:bold;'>ℹ️ DATA TIDAK TERSEDIA</p>
+                    <p style='margin:5px 0 0 0; font-size: 0.9rem;'>Tidak ada data kategori (line_item) yang ditemukan pada filter ini.</p>
                 </div>
                 """, unsafe_allow_html=True)
-            else:
-                st.success("✅ Semua kategori memiliki proporsi di atas 10%")
         
         st.markdown("---")
         
