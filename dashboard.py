@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import requests
 import re
 from collections import Counter
 from datetime import datetime
@@ -63,32 +64,50 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================================
+# KONEKSI SUPABASE
+# ============================================================================
+SUPABASE_URL = 'https://eefmonebltpdrmdmbpuc.supabase.co'
+SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlZm1vbmVibHRwZHJtZG1icHVjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTMwNzg5NCwiZXhwIjoyMDk0ODgzODk0fQ.O0O2AyzmbYp6K6A9GxkZXVdnczlMzzMur1L7p2FvwWA'
+
+# ============================================================================
 # LOAD DATA
 # ============================================================================
 @st.cache_data(ttl=3600)
 def load_data():
-    """Load data dari file local labels.csv."""
+    """Load data dari Supabase menggunakan REST API dengan pagination."""
     try:
-        with st.spinner('Memuat data dari labels.csv...'):
-            df_raw = pd.read_csv('labels.csv')
-            
-        if df_raw.empty:
-            st.warning("Tidak ada data ditemukan di labels.csv")
+        headers = {
+            'apikey': SUPABASE_KEY,
+            'Authorization': f'Bearer {SUPABASE_KEY}'
+        }
+        all_rows = []
+        offset = 0
+        page_size = 1000
+
+        with st.spinner('Mengambil data dari Supabase...'):
+            while True:
+                url = (
+                    f"{SUPABASE_URL}/rest/v1/ocr_labels"
+                    f"?select=id,filename,label,class,updated_at,updated_by"
+                    f"&verified=eq.true&order=id.asc&offset={offset}&limit={page_size}"
+                )
+                response = requests.get(url, headers=headers)
+                if response.status_code != 200:
+                    st.error(f"Error fetching data: {response.status_code}")
+                    break
+                batch = response.json()
+                if not batch:
+                    break
+                all_rows.extend(batch)
+                if len(batch) < page_size:
+                    break
+                offset += page_size
+
+        if not all_rows:
+            st.warning("Tidak ada data ditemukan")
             return None, None
 
-        # -- PENYESUAIAN SCHEMA --
-        # Map 'filepath' ke 'filename' agar sesuai dengan sisa kode
-        if 'filepath' in df_raw.columns:
-            df_raw = df_raw.rename(columns={'filepath': 'filename'})
-            
-        # Tambahkan kolom dummy yang sebelumnya ada di Supabase
-        if 'id' not in df_raw.columns:
-            df_raw['id'] = range(1, len(df_raw) + 1)
-        if 'updated_at' not in df_raw.columns:
-            # Gunakan waktu sekarang sebagai default
-            df_raw['updated_at'] = pd.Timestamp.now(tz='UTC')
-        if 'updated_by' not in df_raw.columns:
-            df_raw['updated_by'] = 'system'
+        df_raw = pd.DataFrame(all_rows)
 
         # -- DATA CLEANING DASAR --
         df = df_raw.copy()
@@ -108,7 +127,7 @@ def load_data():
         df.loc[df['label'].str.contains(r'\$', na=False, regex=True), 'mata_uang'] = 'USD ($)'
         df.loc[df['label'].str.contains(r'Rp|rp|IDR', na=False, regex=True), 'mata_uang'] = 'IDR (Rp)'
 
-        st.success(f"Berhasil memuat {len(df):,} baris data dari labels.csv!")
+        st.success(f"Berhasil memuat {len(df):,} baris data!")
         return df, df_raw
 
     except Exception as e:
@@ -552,7 +571,7 @@ def main():
     df, df_raw = load_data()
 
     if df is None:
-        st.error("Gagal memuat data. Periksa ketersediaan file labels.csv.")
+        st.error("Gagal memuat data. Periksa koneksi Supabase.")
         return
 
     # Feature Engineering
@@ -1095,7 +1114,7 @@ def main():
     st.markdown("""
     <div style='text-align:center;padding:2rem;background-color:#000;color:#FFF;border:4px solid #FFD700;box-shadow:0px -10px 0px #FFD700;'>
         <h3 style='color:#FFD700;margin:0;'>© 2026 NOTEPAY | CC26-PSU410</h3>
-        <p style='margin:10px 0 0 0;font-weight:bold;'>POWERED BY STREAMLIT & PANDAS</p>
+        <p style='margin:10px 0 0 0;font-weight:bold;'>POWERED BY STREAMLIT & SUPABASE</p>
     </div>
     """, unsafe_allow_html=True)
 
