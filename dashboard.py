@@ -609,12 +609,14 @@ def main():
         st.markdown("### 🔍 FILTER DATA")
         search_query = st.text_input("CARI LABEL / ITEM", "").strip().lower()
 
-        valid_dates = df['tanggal'].dropna()
-        if not valid_dates.empty:
-            min_date, max_date = min(valid_dates), max(valid_dates)
-            date_range = st.date_input("RENTANG TANGGAL", value=(min_date, max_date), min_value=min_date, max_value=max_date)
-        else:
-            date_range = None
+        # Filter Tahun
+        df['tahun'] = df['updated_at'].dt.year
+        available_years = sorted(df['tahun'].unique())
+        selected_years = st.multiselect(
+            "PILIH TAHUN",
+            options=["Semua Tahun"] + [str(y) for y in available_years],
+            default=["Semua Tahun"]
+        )
 
         classes = df['class'].unique()
         selected_classes = st.multiselect("PILIH KELAS DATA", options=classes, default=classes.tolist())
@@ -631,8 +633,9 @@ def main():
             filtered_df = filtered_df[mask]
             filtered_fe = filtered_fe[mask]
 
-        if date_range and len(date_range) == 2:
-            mask = (filtered_df['tanggal'] >= date_range[0]) & (filtered_df['tanggal'] <= date_range[1])
+        if "Semua Tahun" not in selected_years:
+            years_int = [int(y) for y in selected_years]
+            mask = filtered_df['tahun'].isin(years_int)
             filtered_df = filtered_df[mask]
             filtered_fe = filtered_fe[mask]
 
